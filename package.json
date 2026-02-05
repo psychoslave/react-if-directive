@@ -1,9 +1,10 @@
 {
-    "name": "if-react",
+    "name": "ifreact",
     "version": "1.0.0",
     "description": "React conditional rendering directives (r-if, r-else-if, r-else) with Vite plugin and ESLint support",
     "author": "",
     "license": "MIT",
+    "private": false,
     "keywords": [
         "react",
         "vite",

@@ -1,4 +1,4 @@
-# if-react
+# ifreact
 
 React conditional rendering directives for cleaner JSX. Use `r-if`, `r-else-if`, and `r-else` attributes directly on elements instead of writing complex ternary expressions.
 
@@ -14,7 +14,7 @@ React conditional rendering directives for cleaner JSX. Use `r-if`, `r-else-if`,
 ## Installation
 
 ```bash
-npm install if-react
+npm install ifreact
 ```
 
 ## Quick Start
@@ -25,7 +25,7 @@ npm install if-react
 // vite.config.ts
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { ifReact } from "if-react/vite";
+import { ifReact } from "ifreact/vite";
 
 export default defineConfig({
     plugins: [
@@ -40,7 +40,7 @@ export default defineConfig({
 ```ts
 // src/vite-env.d.ts (or any .d.ts file)
 /// <reference types="vite/client" />
-/// <reference types="if-react/types" />
+/// <reference types="ifreact/types" />
 ```
 
 Or in `tsconfig.json`:
@@ -48,7 +48,7 @@ Or in `tsconfig.json`:
 ```json
 {
     "compilerOptions": {
-        "types": ["if-react/types"]
+        "types": ["ifreact/types"]
     }
 }
 ```
@@ -149,7 +149,7 @@ Get inline editor errors for invalid directive usage.
 
 ```js
 // eslint.config.js (ESLint 9+ flat config)
-import ifReactPlugin from "if-react/eslint";
+import ifReactPlugin from "ifreact/eslint";
 
 export default [
     {
@@ -177,7 +177,7 @@ export default [
 ### Vite Plugin Options
 
 ```ts
-import { ifReact } from "if-react/vite";
+import { ifReact } from "ifreact/vite";
 
 ifReact({
     /**
