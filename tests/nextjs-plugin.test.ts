@@ -44,7 +44,7 @@ describe("if-react Next.js Plugin", () => {
 
         it("should add a babel-loader rule for [jt]sx files", () => {
             const config = withIfReact({});
-            const mockWebpackConfig = { module: { rules: [] } };
+            const mockWebpackConfig: any = { module: { rules: [] } };
             config.webpack(mockWebpackConfig, {});
             expect(mockWebpackConfig.module.rules).toHaveLength(1);
             const rule = mockWebpackConfig.module.rules[0];
@@ -54,7 +54,7 @@ describe("if-react Next.js Plugin", () => {
 
         it("should include react-if-directive/babel plugin in loader options", () => {
             const config = withIfReact({});
-            const mockWebpackConfig = { module: { rules: [] } };
+            const mockWebpackConfig: any = { module: { rules: [] } };
             config.webpack(mockWebpackConfig, {});
             const { plugins } = mockWebpackConfig.module.rules[0].use.options;
             const ifReactPlugin = plugins.find(
@@ -65,7 +65,7 @@ describe("if-react Next.js Plugin", () => {
 
         it("should pass strict: false by default to the babel plugin", () => {
             const config = withIfReact({});
-            const mockWebpackConfig = { module: { rules: [] } };
+            const mockWebpackConfig: any = { module: { rules: [] } };
             config.webpack(mockWebpackConfig, {});
             const { plugins } = mockWebpackConfig.module.rules[0].use.options;
             const ifReactPlugin = plugins.find(
@@ -76,7 +76,7 @@ describe("if-react Next.js Plugin", () => {
 
         it("should forward strict: true to the babel plugin", () => {
             const config = withIfReact({}, { strict: true });
-            const mockWebpackConfig = { module: { rules: [] } };
+            const mockWebpackConfig: any = { module: { rules: [] } };
             config.webpack(mockWebpackConfig, {});
             const { plugins } = mockWebpackConfig.module.rules[0].use.options;
             const ifReactPlugin = plugins.find(
@@ -92,14 +92,14 @@ describe("if-react Next.js Plugin", () => {
                 return cfg;
             };
             const config = withIfReact({ webpack: originalWebpack });
-            config.webpack({ module: { rules: [] } }, {});
+            config.webpack({ module: { rules: [] } } as any, {});
             expect(called).toBe(true);
         });
 
         it("should return the result of the original webpack function", () => {
             const sentinel = { module: { rules: [] }, sentinel: true };
             const config = withIfReact({ webpack: () => sentinel });
-            const result = config.webpack({ module: { rules: [] } }, {});
+            const result = config.webpack({ module: { rules: [] } } as any, {});
             expect(result).toBe(sentinel);
         });
     });
