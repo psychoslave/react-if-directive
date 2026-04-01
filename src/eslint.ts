@@ -1,12 +1,31 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 /**
- * ESLint rule for validating r-if, r-else-if, r-else directive chains.
+ * ESLint rule for validating r-if/if, r-else-if/else-if, r-else/else directive chains.
  * Provides inline editor errors for invalid directive usage.
  */
 
+type DirectiveType = "if" | "else-if" | "else";
+type DirectiveAttributeName =
+    | "r-if"
+    | "if"
+    | "r-else-if"
+    | "else-if"
+    | "r-else"
+    | "else";
+
+const DIRECTIVE_NAME_TO_TYPE: Record<DirectiveAttributeName, DirectiveType> = {
+    "r-if": "if",
+    if: "if",
+    "r-else-if": "else-if",
+    "else-if": "else-if",
+    "r-else": "else",
+    else: "else",
+};
+
 interface DirectiveInfo {
-    type: "r-if" | "r-else-if" | "r-else";
+    type: DirectiveType;
+    attrName: DirectiveAttributeName;
     hasValue: boolean;
     node: any;
 }
@@ -23,21 +42,21 @@ const validDirectivesRule = {
     meta: {
         type: "problem",
         docs: {
-            description: "Validate r-if, r-else-if, r-else directive chains",
+            description: "Validate r-if/if, r-else-if/else-if, r-else/else directive chains",
             category: "Possible Errors",
             recommended: true,
         },
         messages: {
             orphanedElseIf:
-                "'r-else-if' must immediately follow an 'r-if' or 'r-else-if' element.",
+                "'r-else-if'/'else-if' must immediately follow an 'r-if'/'if' or 'r-else-if'/'else-if' element.",
             orphanedElse:
-                "'r-else' must immediately follow an 'r-if' or 'r-else-if' element.",
+                "'r-else'/'else' must immediately follow an 'r-if'/'if' or 'r-else-if'/'else-if' element.",
             duplicateElse:
-                "'r-else' already exists in this chain. Only one 'r-else' is allowed at the end.",
+                "'r-else'/'else' already exists in this chain. Only one final else is allowed.",
             afterElse:
-                "'{{directive}}' cannot follow 'r-else'. The 'r-else' must be the last in the chain.",
-            elseIfWithoutCondition: "'r-else-if' requires a condition.",
-            ifWithoutCondition: "'r-if' requires a condition.",
+                "'{{directive}}' cannot follow 'r-else'/'else'. Else must be the last in the chain.",
+            elseIfWithoutCondition: "'r-else-if'/'else-if' requires a condition.",
+            ifWithoutCondition: "'r-if'/'if' requires a condition.",
         },
         schema: [],
     },
@@ -55,9 +74,11 @@ const validDirectivesRule = {
                 if (attr.name?.type !== "JSXIdentifier") continue;
 
                 const name = attr.name.name;
-                if (name === "r-if" || name === "r-else-if" || name === "r-else") {
+                if (name in DIRECTIVE_NAME_TO_TYPE) {
+                    const attrName = name as DirectiveAttributeName;
                     return {
-                        type: name as DirectiveInfo["type"],
+                        type: DIRECTIVE_NAME_TO_TYPE[attrName],
+                        attrName,
                         hasValue: attr.value !== null,
                         node: attr,
                     };
@@ -127,24 +148,24 @@ const validDirectivesRule = {
                 const directive = getDirective(next);
                 if (!directive) break;
 
-                if (directive.type === "r-if") break;
+                if (directive.type === "if") break;
 
                 if (hasElse) {
                     context.report({
                         node: directive.node,
                         messageId: "afterElse",
-                        data: { directive: directive.type },
+                        data: { directive: directive.attrName },
                     });
                     processedNodes.add(next);
                     current = next;
                     continue;
                 }
 
-                if (directive.type === "r-else") {
+                if (directive.type === "else") {
                     hasElse = true;
                 }
 
-                if (directive.type === "r-else-if" && !directive.hasValue) {
+                if (directive.type === "else-if" && !directive.hasValue) {
                     context.report({
                         node: directive.node,
                         messageId: "elseIfWithoutCondition",
@@ -160,7 +181,9 @@ const validDirectivesRule = {
             JSXAttribute(node: any) {
                 if (node.name?.type !== "JSXIdentifier") return;
                 const name = node.name.name;
-                if (!["r-if", "r-else-if", "r-else"].includes(name)) return;
+                if (!(name in DIRECTIVE_NAME_TO_TYPE)) return;
+                const attrName = name as DirectiveAttributeName;
+                const directiveType = DIRECTIVE_NAME_TO_TYPE[attrName];
 
                 const element = node.parent?.parent;
                 if (!element || element.type !== "JSXElement") return;
@@ -168,7 +191,7 @@ const validDirectivesRule = {
                 if (processedNodes.has(element)) return;
 
                 // Check r-if has a condition
-                if (name === "r-if" && node.value === null) {
+                if (directiveType === "if" && node.value === null) {
                     context.report({
                         node: node,
                         messageId: "ifWithoutCondition",
@@ -176,15 +199,15 @@ const validDirectivesRule = {
                 }
 
                 // Check r-else-if has a condition
-                if (name === "r-else-if" && node.value === null) {
+                if (directiveType === "else-if" && node.value === null) {
                     context.report({
                         node: node,
                         messageId: "elseIfWithoutCondition",
                     });
                 }
 
-                // For r-else-if and r-else, check they follow an r-if or r-else-if
-                if (name === "r-else-if" || name === "r-else") {
+                // For else-if/else, check they follow an if/else-if
+                if (directiveType === "else-if" || directiveType === "else") {
                     const parent = element.parent;
                     if (!parent) return;
 
@@ -200,7 +223,7 @@ const validDirectivesRule = {
                     if (!prevSibling) {
                         context.report({
                             node: node,
-                            messageId: name === "r-else" ? "orphanedElse" : "orphanedElseIf",
+                            messageId: directiveType === "else" ? "orphanedElse" : "orphanedElseIf",
                         });
                         processedNodes.add(element);
                         return;
@@ -210,29 +233,20 @@ const validDirectivesRule = {
 
                     if (
                         !prevDirective ||
-                        (prevDirective.type !== "r-if" && prevDirective.type !== "r-else-if")
+                        (prevDirective.type !== "if" && prevDirective.type !== "else-if")
                     ) {
                         context.report({
                             node: node,
-                            messageId: name === "r-else" ? "orphanedElse" : "orphanedElseIf",
+                            messageId: directiveType === "else" ? "orphanedElse" : "orphanedElseIf",
                         });
                         processedNodes.add(element);
                         return;
                     }
 
-                    if ((prevDirective.type as string) === "r-else") {
-                        context.report({
-                            node: node,
-                            messageId: "afterElse",
-                            data: { directive: name },
-                        });
-                        processedNodes.add(element);
-                        return;
-                    }
                 }
 
-                // For r-if, validate the entire chain
-                if (name === "r-if") {
+                // For if/r-if, validate the entire chain
+                if (directiveType === "if") {
                     const parent = element.parent;
                     let siblings: any[] | null = null;
 

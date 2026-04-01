@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as parser from "@babel/parser";
 import _traverse from "@babel/traverse";
+import type { NodePath } from "@babel/traverse";
 import _generate from "@babel/generator";
 import * as t from "@babel/types";
 
@@ -19,6 +20,24 @@ const generate = (
 
 // Import the transform logic (we'll test the core transformation)
 import { ifReact } from "../src/vite";
+
+type DirectiveType = "if" | "else-if" | "else";
+type DirectiveAttributeName =
+    | "r-if"
+    | "if"
+    | "r-else-if"
+    | "else-if"
+    | "r-else"
+    | "else";
+
+const DIRECTIVE_NAME_TO_TYPE: Record<DirectiveAttributeName, DirectiveType> = {
+    "r-if": "if",
+    if: "if",
+    "r-else-if": "else-if",
+    "else-if": "else-if",
+    "r-else": "else",
+    else: "else",
+};
 
 describe("if-react Vite Plugin", () => {
     describe("ifReact()", () => {
@@ -54,8 +73,8 @@ describe("if-react Vite Plugin", () => {
                     const directive = getDirective(path.node);
                     if (!directive) return;
 
-                    if (directive.type !== "r-if") {
-                        removeDirectiveAttribute(path.node, directive.type);
+                    if (directive.type !== "if") {
+                        removeDirectiveAttribute(path.node, directive.attrName);
                         processedNodes.add(path.node);
                         return;
                     }
@@ -80,38 +99,48 @@ describe("if-react Vite Plugin", () => {
         // Helper functions (simplified versions for testing)
         function getDirective(
             node: t.JSXElement
-        ): { type: "r-if" | "r-else-if" | "r-else"; condition: t.Expression | null } | null {
+        ): { type: DirectiveType; attrName: DirectiveAttributeName; condition: t.Expression | null } | null {
             for (const attr of node.openingElement.attributes) {
                 if (!t.isJSXAttribute(attr)) continue;
                 const name = t.isJSXIdentifier(attr.name) ? attr.name.name : null;
 
-                if (name === "r-if" || name === "r-else-if") {
+                if (!name || !(name in DIRECTIVE_NAME_TO_TYPE)) {
+                    continue;
+                }
+
+                const attrName = name as DirectiveAttributeName;
+                const type = DIRECTIVE_NAME_TO_TYPE[attrName];
+
+                if (type === "if" || type === "else-if") {
                     const value = attr.value;
                     if (t.isJSXExpressionContainer(value)) {
                         const expr = value.expression;
                         if (t.isExpression(expr) && !t.isJSXEmptyExpression(expr)) {
-                            return { type: name, condition: expr };
+                            return { type, attrName, condition: expr };
                         }
                     }
-                } else if (name === "r-else") {
-                    return { type: "r-else", condition: null };
+                } else {
+                    return { type, attrName, condition: null };
                 }
             }
             return null;
         }
 
-        function removeDirectiveAttribute(node: t.JSXElement, directiveType: string): void {
+        function removeDirectiveAttribute(
+            node: t.JSXElement,
+            directiveName: DirectiveAttributeName
+        ): void {
             node.openingElement.attributes = node.openingElement.attributes.filter(
                 (attr) => {
                     if (!t.isJSXAttribute(attr)) return true;
                     const name = t.isJSXIdentifier(attr.name) ? attr.name.name : null;
-                    return name !== directiveType;
+                    return name !== directiveName;
                 }
             );
         }
 
         function collectDirectiveChain(
-            startPath: ReturnType<typeof traverse.NodePath<t.JSXElement>>,
+            startPath: NodePath<t.JSXElement>,
             processedNodes: WeakSet<t.Node>
         ): Array<{ node: t.JSXElement; directive: NonNullable<ReturnType<typeof getDirective>> }> {
             const chain: Array<{
@@ -120,7 +149,7 @@ describe("if-react Vite Plugin", () => {
             }> = [];
 
             const startDirective = getDirective(startPath.node)!;
-            removeDirectiveAttribute(startPath.node, startDirective.type);
+            removeDirectiveAttribute(startPath.node, startDirective.attrName);
             chain.push({ node: startPath.node, directive: startDirective });
             processedNodes.add(startPath.node);
 
@@ -139,12 +168,12 @@ describe("if-react Vite Plugin", () => {
 
                 const directive = getDirective(sibling.node);
                 if (!directive) break;
-                if (directive.type === "r-if") break;
+                if (directive.type === "if") break;
                 if (hasElse) break;
 
-                if (directive.type === "r-else") hasElse = true;
+                if (directive.type === "else") hasElse = true;
 
-                removeDirectiveAttribute(sibling.node, directive.type);
+                removeDirectiveAttribute(sibling.node, directive.attrName);
                 chain.push({ node: sibling.node, directive });
                 processedNodes.add(sibling.node);
                 sibling.remove();
@@ -213,6 +242,38 @@ describe("if-react Vite Plugin", () => {
             expect(output).not.toContain("r-else-if");
             expect(output).not.toContain("r-else");
             // Should have nested ternaries
+            expect(output.match(/\?/g)?.length).toBe(2);
+        });
+
+        it("should transform unprefixed if/else-if/else", () => {
+            const input = `const App = () => (
+                <div>
+                    <span if={status === "a"}>A</span>
+                    <span else-if={status === "b"}>B</span>
+                    <span else>C</span>
+                </div>
+            )`;
+            const output = transformCode(input);
+
+            expect(output).not.toContain(" if=");
+            expect(output).not.toContain("else-if");
+            expect(output).not.toContain(" else>");
+            expect(output.match(/\?/g)?.length).toBe(2);
+        });
+
+        it("should transform mixed r-* and unprefixed chain", () => {
+            const input = `const App = () => (
+                <div>
+                    <span r-if={a}>A</span>
+                    <span else-if={b}>B</span>
+                    <span r-else>C</span>
+                </div>
+            )`;
+            const output = transformCode(input);
+
+            expect(output).not.toContain("r-if");
+            expect(output).not.toContain("else-if");
+            expect(output).not.toContain("r-else");
             expect(output.match(/\?/g)?.length).toBe(2);
         });
 
@@ -304,5 +365,27 @@ describe("Edge Cases", () => {
         );
 
         expect(result).toBeNull();
+    });
+
+    it("should process files that use unprefixed directives", () => {
+        const plugin = ifReact();
+        const context = {
+            configResolved: plugin.configResolved as (config: { command: string }) => void,
+            transform: plugin.transform as (
+                code: string,
+                id: string
+            ) => { code: string } | null,
+        };
+
+        context.configResolved({ command: "serve" });
+
+        const result = context.transform.call(
+            { warn: vi.fn(), error: vi.fn() },
+            "const App = () => <div><span if={show}>Visible</span></div>",
+            "test.tsx"
+        );
+
+        expect(result).not.toBeNull();
+        expect(result!.code).toContain("&&");
     });
 });

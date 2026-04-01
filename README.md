@@ -1,11 +1,11 @@
 # react-if-directive
 
-React conditional rendering directives for cleaner JSX. Use `r-if`, `r-else-if`, and `r-else` attributes directly on elements instead of writing complex ternary expressions. Works with **Vite**, **Next.js**, **Webpack**, **Babel**, and any React project.
+React conditional rendering directives for cleaner JSX. Use `r-if`/`if`, `r-else-if`/`else-if`, and `r-else`/`else` attributes directly on elements instead of writing complex ternary expressions. Works with **Vite**, **Next.js**, **Webpack**, **Babel**, and any React project.
 
 ## Features
 
 - **Clean Syntax** - Write `<div r-if={condition}>` instead of `{condition && <div>}`
-- **Full Chain Support** - `r-if` / `r-else-if` / `r-else` chains like traditional if-else
+- **Full Chain Support** - `r-if` / `r-else-if` / `r-else` (or `if` / `else-if` / `else`) chains like traditional if-else
 - **Multi-Framework Support** - Works with Vite, Next.js, Webpack, Babel, and any React bundler
 - **Zero Runtime** - Compiles to standard React at build time, zero overhead
 - **ESLint Plugin** - Inline editor errors for invalid directive usage
@@ -100,6 +100,14 @@ function UserStatus({ user, isLoading }) {
         </div>
     );
 }
+```
+
+You can also use the unprefixed aliases:
+
+```tsx
+<p if={isLoading}>Loading...</p>
+<p else-if={!user}>Please log in</p>
+<p else>Welcome!</p>
 ```
 
 ## Usage Examples
@@ -256,15 +264,15 @@ withIfReact(nextConfig, {
 
 | Directive | Description | Condition Required |
 |-----------|-------------|-------------------|
-| `r-if` | Render element if condition is truthy | Yes |
-| `r-else-if` | Render if previous conditions were false and this is truthy | Yes |
-| `r-else` | Render if all previous conditions were false | No |
+| `r-if` or `if` | Render element if condition is truthy | Yes |
+| `r-else-if` or `else-if` | Render if previous conditions were false and this is truthy | Yes |
+| `r-else` or `else` | Render if all previous conditions were false | No |
 
 ### Rules
 
-1. **Chain Start**: Every chain must start with `r-if`
-2. **Immediate Siblings**: `r-else-if` and `r-else` must immediately follow `r-if` or `r-else-if`
-3. **Single Else**: Only one `r-else` per chain, must be last
+1. **Chain Start**: Every chain must start with `r-if` or `if`
+2. **Immediate Siblings**: `r-else-if`/`else-if` and `r-else`/`else` must immediately follow `r-if`/`if` or `r-else-if`/`else-if`
+3. **Single Else**: Only one `r-else`/`else` per chain, must be last
 4. **No Gaps**: Elements between directives break the chain
 
 ## How It Works

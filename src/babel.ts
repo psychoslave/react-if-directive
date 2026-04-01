@@ -1,5 +1,5 @@
 /**
- * Babel plugin that transforms r-if, r-else-if, and r-else directives
+ * Babel plugin that transforms r-if/if, r-else-if/else-if, and r-else/else directives
  * into standard React conditional rendering.
  *
  * This is the core transformation logic that can be used with any bundler
@@ -60,8 +60,27 @@ interface DirectiveError {
     column: number;
 }
 
+type DirectiveType = "if" | "else-if" | "else";
+type DirectiveAttributeName =
+    | "r-if"
+    | "if"
+    | "r-else-if"
+    | "else-if"
+    | "r-else"
+    | "else";
+
+const DIRECTIVE_NAME_TO_TYPE: Record<DirectiveAttributeName, DirectiveType> = {
+    "r-if": "if",
+    if: "if",
+    "r-else-if": "else-if",
+    "else-if": "else-if",
+    "r-else": "else",
+    else: "else",
+};
+
 interface DirectiveInfo {
-    type: "r-if" | "r-else-if" | "r-else";
+    type: DirectiveType;
+    attrName: DirectiveAttributeName;
     condition: t.Expression | null;
 }
 
@@ -128,17 +147,17 @@ function processAST(ast: t.Program, errors: DirectiveError[], types: typeof t): 
                 return;
             }
 
-            // If it's r-else-if or r-else without being part of a chain,
+            // If it's else-if/else without being part of a chain,
             // it's orphaned
-            if (directive.type !== "r-if") {
+            if (directive.type !== "if") {
                 const loc = path.node.loc?.start || { line: 1, column: 0 };
                 errors.push({
-                    message: `'${directive.type}' must follow an 'r-if' or 'r-else-if' element as an immediate sibling.`,
+                    message: `'${directive.attrName}' must follow an 'r-if'/'if' or 'r-else-if'/'else-if' element as an immediate sibling.`,
                     line: loc.line,
                     column: loc.column + 1,
                 });
                 // Remove the directive attribute
-                removeDirectiveAttribute(path.node, directive.type);
+                removeDirectiveAttribute(path.node, directive.attrName);
                 processedNodes.add(path.node);
 
                 // Hide the orphaned element
@@ -152,7 +171,7 @@ function processAST(ast: t.Program, errors: DirectiveError[], types: typeof t): 
                 return;
             }
 
-            // We have an r-if - collect the chain
+            // We have an if/r-if - collect the chain
             const chain = collectDirectiveChain(path as NodePath<t.JSXElement>, errors, processedNodes);
 
             if (chain.length === 0) {
@@ -184,13 +203,20 @@ function getDirective(node: t.JSXElement): DirectiveInfo | null {
 
         const name = t.isJSXIdentifier(attr.name) ? attr.name.name : null;
 
-        if (name === "r-if" || name === "r-else-if") {
+        if (!name || !(name in DIRECTIVE_NAME_TO_TYPE)) {
+            continue;
+        }
+
+        const attrName = name as DirectiveAttributeName;
+        const type = DIRECTIVE_NAME_TO_TYPE[attrName];
+
+        if (type === "if" || type === "else-if") {
             const condition = extractCondition(attr);
             if (condition) {
-                return { type: name, condition };
+                return { type, attrName, condition };
             }
-        } else if (name === "r-else") {
-            return { type: "r-else", condition: null };
+        } else {
+            return { type, attrName, condition: null };
         }
     }
 
@@ -216,11 +242,11 @@ function extractCondition(attr: t.JSXAttribute): t.Expression | null {
     return null;
 }
 
-function removeDirectiveAttribute(node: t.JSXElement, directiveType: string): void {
+function removeDirectiveAttribute(node: t.JSXElement, directiveName: DirectiveAttributeName): void {
     node.openingElement.attributes = node.openingElement.attributes.filter((attr) => {
         if (!t.isJSXAttribute(attr)) return true;
         const name = t.isJSXIdentifier(attr.name) ? attr.name.name : null;
-        return name !== directiveType;
+        return name !== directiveName;
     });
 }
 
@@ -231,9 +257,9 @@ function collectDirectiveChain(
 ): ChainElement[] {
     const chain: ChainElement[] = [];
 
-    // Add the starting r-if element
+    // Add the starting if/r-if element
     const startDirective = getDirective(startPath.node)!;
-    removeDirectiveAttribute(startPath.node, startDirective.type);
+    removeDirectiveAttribute(startPath.node, startDirective.attrName);
     chain.push({
         node: startPath.node,
         directive: startDirective,
@@ -257,7 +283,7 @@ function collectDirectiveChain(
             break;
         }
 
-        if (directive.type === "r-if") {
+        if (directive.type === "if") {
             break;
         }
 
@@ -268,7 +294,7 @@ function collectDirectiveChain(
                 line: loc.line,
                 column: loc.column + 1,
             });
-            removeDirectiveAttribute(nextSibling.node, directive.type);
+            removeDirectiveAttribute(nextSibling.node, directive.attrName);
             processedNodes.add(nextSibling.node);
 
             // Hide invalid element
@@ -279,12 +305,12 @@ function collectDirectiveChain(
             break;
         }
 
-        if (directive.type === "r-else") {
+        if (directive.type === "else") {
             hasElse = true;
         }
 
         // Add to chain
-        removeDirectiveAttribute(nextSibling.node, directive.type);
+        removeDirectiveAttribute(nextSibling.node, directive.attrName);
         chain.push({
             node: nextSibling.node,
             directive,
@@ -345,13 +371,13 @@ function buildConditionalExpression(chain: ChainElement[]): t.Expression {
     const last = chain[chain.length - 1];
     let alternate: t.Expression;
 
-    if (last.directive.type === "r-else") {
+    if (last.directive.type === "else") {
         alternate = last.node;
     } else {
         alternate = t.nullLiteral();
     }
 
-    const startIndex = last.directive.type === "r-else" ? chain.length - 2 : chain.length - 1;
+    const startIndex = last.directive.type === "else" ? chain.length - 2 : chain.length - 1;
 
     for (let i = startIndex; i >= 0; i--) {
         const { node, directive } = chain[i];

@@ -32,6 +32,7 @@ declare module "react" {
          * ```
          */
         "r-if"?: boolean | unknown;
+        "if"?: boolean | unknown;
 
         /**
          * Render this element if the previous `r-if` or `r-else-if` was false.
@@ -44,6 +45,7 @@ declare module "react" {
          * ```
          */
         "r-else-if"?: boolean | unknown;
+        "else-if"?: boolean | unknown;
 
         /**
          * Render this element if all previous `r-if` and `r-else-if` conditions were false.
@@ -58,6 +60,7 @@ declare module "react" {
          * ```
          */
         "r-else"?: boolean;
+        "else"?: boolean;
     }
 
     interface SVGAttributes<T> {
@@ -65,16 +68,19 @@ declare module "react" {
          * Conditionally render this SVG element.
          */
         "r-if"?: boolean | unknown;
+        "if"?: boolean | unknown;
 
         /**
          * Render this SVG element if the previous `r-if` or `r-else-if` was false.
          */
         "r-else-if"?: boolean | unknown;
+        "else-if"?: boolean | unknown;
 
         /**
          * Render this SVG element if all previous conditions were false.
          */
         "r-else"?: boolean;
+        "else"?: boolean;
     }
 }
 
@@ -86,16 +92,19 @@ declare global {
              * Conditionally render this component.
              */
             "r-if"?: boolean | unknown;
+            "if"?: boolean | unknown;
 
             /**
              * Render this component if the previous `r-if` or `r-else-if` was false.
              */
             "r-else-if"?: boolean | unknown;
+            "else-if"?: boolean | unknown;
 
             /**
              * Render this component if all previous conditions were false.
              */
             "r-else"?: boolean;
+            "else"?: boolean;
         }
     }
 }

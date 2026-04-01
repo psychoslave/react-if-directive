@@ -102,6 +102,26 @@ describe("if-react ESLint Plugin", () => {
                             </>
                         )`,
                     },
+                    // Unprefixed directives
+                    {
+                        code: `const App = () => (
+                            <div>
+                                <span if={a}>A</span>
+                                <span else-if={b}>B</span>
+                                <span else>C</span>
+                            </div>
+                        )`,
+                    },
+                    // Mixed prefixed and unprefixed directives
+                    {
+                        code: `const App = () => (
+                            <div>
+                                <span r-if={a}>A</span>
+                                <span else-if={b}>B</span>
+                                <span r-else>C</span>
+                            </div>
+                        )`,
+                    },
                 ],
                 invalid: [
                     // Orphaned r-else
@@ -118,6 +138,15 @@ describe("if-react ESLint Plugin", () => {
                         code: `const App = () => (
                             <div>
                                 <span r-else-if={x}>Orphan</span>
+                            </div>
+                        )`,
+                        errors: [{ messageId: "orphanedElseIf" }],
+                    },
+                    // Orphaned unprefixed else-if
+                    {
+                        code: `const App = () => (
+                            <div>
+                                <span else-if={x}>Orphan</span>
                             </div>
                         )`,
                         errors: [{ messageId: "orphanedElseIf" }],
@@ -140,6 +169,17 @@ describe("if-react ESLint Plugin", () => {
                                 <span r-if={a}>A</span>
                                 <span r-else>B</span>
                                 <span r-else-if={c}>C</span>
+                            </div>
+                        )`,
+                        errors: [{ messageId: "afterElse" }],
+                    },
+                    // unprefixed else after else
+                    {
+                        code: `const App = () => (
+                            <div>
+                                <span if={a}>A</span>
+                                <span else>B</span>
+                                <span else-if={c}>C</span>
                             </div>
                         )`,
                         errors: [{ messageId: "afterElse" }],
