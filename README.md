@@ -1,12 +1,13 @@
 # react-if-directive
 
-React conditional rendering directives for cleaner JSX. Use `r-if`, `r-else-if`, and `r-else` attributes directly on elements instead of writing complex ternary expressions.
+React conditional rendering directives for cleaner JSX. Use `r-if`, `r-else-if`, and `r-else` attributes directly on elements instead of writing complex ternary expressions. Works with **Vite**, **Next.js**, **Webpack**, **Babel**, and any React project.
 
 ## Features
 
 - **Clean Syntax** - Write `<div r-if={condition}>` instead of `{condition && <div>}`
 - **Full Chain Support** - `r-if` / `r-else-if` / `r-else` chains like traditional if-else
-- **Vite Plugin** - Zero-runtime, compiles to standard React at build time
+- **Multi-Framework Support** - Works with Vite, Next.js, Webpack, Babel, and any React bundler
+- **Zero Runtime** - Compiles to standard React at build time, zero overhead
 - **ESLint Plugin** - Inline editor errors for invalid directive usage
 - **TypeScript Support** - Full autocomplete and type checking
 - **Deeply Nestable** - Works at any level of component nesting
@@ -19,7 +20,9 @@ npm install react-if-directive
 
 ## Quick Start
 
-### 1. Configure Vite
+Choose your framework:
+
+### Vite
 
 ```ts
 // vite.config.ts
@@ -35,15 +38,41 @@ export default defineConfig({
 });
 ```
 
-### 2. Add TypeScript Support
+### Next.js
 
 ```ts
-// src/vite-env.d.ts (or any .d.ts file)
-/// <reference types="vite/client" />
-/// <reference types="react-if-directive/types" />
+// next.config.js or next.config.mjs
+import { withIfReact } from "react-if-directive/nextjs";
+
+const nextConfig = {
+    // your Next.js config here
+};
+
+export default withIfReact(nextConfig);
 ```
 
-Or in `tsconfig.json`:
+### Babel (Webpack, CRA, and others)
+
+```js
+// .babelrc or babel.config.js
+{
+  "plugins": ["react-if-directive/babel"]
+}
+```
+
+Or in `babel.config.js`:
+
+```js
+module.exports = {
+  plugins: [
+    ["react-if-directive/babel", { strict: false }]
+  ]
+};
+```
+
+### TypeScript Support
+
+Add to your `tsconfig.json`:
 
 ```json
 {
@@ -53,7 +82,13 @@ Or in `tsconfig.json`:
 }
 ```
 
-### 3. Use in Components
+Or add a reference in a `.d.ts` file:
+
+```ts
+/// <reference types="react-if-directive/types" />
+```
+
+### Use in Components
 
 ```tsx
 function UserStatus({ user, isLoading }) {
@@ -189,6 +224,34 @@ ifReact({
 });
 ```
 
+### Next.js Plugin Options
+
+```ts
+import { withIfReact } from "react-if-directive/nextjs";
+
+withIfReact(nextConfig, {
+    /**
+     * If true, always throw errors on invalid directives.
+     * If false (default), only log warnings.
+     * @default false
+     */
+    strict: false,
+});
+```
+
+### Babel Plugin Options
+
+```js
+// .babelrc or babel.config.js
+{
+  "plugins": [
+    ["react-if-directive/babel", {
+      "strict": false  // optional
+    }]
+  ]
+}
+```
+
 ### Directives
 
 | Directive | Description | Condition Required |
@@ -229,14 +292,35 @@ The Vite plugin transforms directives at build time using Babel AST:
 | Type safety | ✅ | ✅ | Varies |
 | ESLint support | ✅ | N/A | ❌ |
 | Nested chains | ✅ | ✅ | Varies |
-| Vite optimized | ✅ | N/A | ❌ |
+| Vite support | ✅ | N/A | ❌ |
+| Next.js support | ✅ | N/A | ❌ |
+| Webpack/CRA support | ✅ | N/A | ❌ |
+| Pure Babel support | ✅ | N/A | ❌ |
+
+## Framework Support
+
+| Framework | Status | Plugin | Notes |
+|-----------|--------|--------|-------|
+| Vite | ✅ Supported | `ifReact()` from `react-if-directive/vite` | Direct plugin |
+| Next.js | ✅ Supported | `withIfReact()` from `react-if-directive/nextjs` | HOC wrapper |
+| Create React App | ✅ Supported | Use Babel plugin directly | Configure in `.babelrc` |
+| Webpack | ✅ Supported | Babel plugin + babel-loader | Use with `babel-loader` |
+| Remix | ✅ Supported | Babel plugin | Configure in `remix.config.js` |
+| Astro | ✅ Supported | Babel plugin | Via integration |
+| Any React Project | ✅ Supported | Babel plugin | Works wherever Babel is used |
 
 ## Requirements
 
-- **Vite** >= 4.0.0
 - **React** >= 17.0.0
+- **Node.js** >= 14.0.0
 - **TypeScript** >= 4.7.0 (optional but recommended)
-- **ESLint** >= 8.0.0 (for ESLint plugin)
+- **ESLint** >= 8.0.0 (for ESLint plugin only)
+
+Per bundler:
+- **Vite**: >= 4.0.0
+- **Next.js**: >= 12.0.0
+- **Webpack**: >= 4.0.0
+- **Babel**: >= 7.0.0
 
 ## License
 
